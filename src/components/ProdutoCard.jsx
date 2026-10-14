@@ -1,8 +1,11 @@
 import { Link } from 'react-router'
 import { formatarPreco } from '../utils/formatarPreco'
+import { podeAdicionarAoCarrinho } from '../utils/carrinho'
 
 export default function ProdutoCard({ produto, onAdicionar }) {
   const esgotado = produto.estoque === 0
+  const podeAdicionar = podeAdicionarAoCarrinho(produto)
+  const temFreteGratis = Number(produto.price) >= 200
 
   return (
     <article className="card">
@@ -25,12 +28,12 @@ export default function ProdutoCard({ produto, onAdicionar }) {
       </div>
 
       <div className="card-selos">
-        {produto.price > 100 && <span className="selo selo-frete">Frete grátis</span>}
+        {temFreteGratis && <span className="selo selo-frete">Frete grátis</span>}
         {esgotado && <span className="selo selo-esgotado">Esgotado</span>}
       </div>
 
-      <button className="botao" onClick={() => onAdicionar(produto)} disabled={esgotado}>
-        Adicionar ao carrinho
+      <button type="button" className="botao" onClick={() => onAdicionar(produto)} disabled={!podeAdicionar}>
+        {esgotado ? 'Esgotado' : 'Adicionar ao carrinho'}
       </button>
     </article>
   )

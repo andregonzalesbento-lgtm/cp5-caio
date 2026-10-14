@@ -1,8 +1,13 @@
 import { Link, useParams } from 'react-router'
+import { useState } from 'react'
+import { podeAdicionarAoCarrinho } from '../utils/carrinho'
 
-export default function PaginaProduto({ produtos, onAdicionar }) {
+export default function PaginaProduto({ produtos, onAdicionar, onRegistrarEspera, listaEspera = [] }) {
   const { id } = useParams()
   const produto = produtos.find((item) => item.id === id)
+  const [nome, setNome] = useState('')
+  const [email, setEmail] = useState('')
+  const [mensagemEspera, setMensagemEspera] = useState('')
 
   if (!produto) {
     return (
@@ -15,9 +20,41 @@ export default function PaginaProduto({ produtos, onAdicionar }) {
     )
   }
 
+  const precoValido =
+    produto.price !== null &&
+    produto.price !== undefined &&
+    String(produto.price).trim() !== '' &&
+    Number.isFinite(Number(produto.price))
+
+  if (!precoValido) {
+    return (
+      <div className="estado-vazio">
+        <p>Este produto está indisponível no momento.</p>
+        <Link to="/" className="botao botao-secundario">
+          Voltar para a loja
+        </Link>
+      </div>
+    )
+  }
+
   const relacionados = produtos
     .filter((item) => item.category === produto.category && item.id !== produto.id)
     .slice(0, 4)
+
+  const esgotado = produto.estoque === 0
+
+  function enviarAlerta(evento) {
+    evento.preventDefault()
+
+    if (!nome.trim() || !email.trim()) {
+      return
+    }
+
+    onRegistrarEspera({ produtoId: produto.id, nome: nome.trim(), email: email.trim() })
+    setNome('')
+    setEmail('')
+    setMensagemEspera('Recebemos seu aviso. Vamos te notificar quando o produto voltar.')
+  }
 
   return (
     <section>
@@ -37,17 +74,43 @@ export default function PaginaProduto({ produtos, onAdicionar }) {
           <p className="card-avaliacao">
             ★ {produto.rating.rate} <span>({produto.rating.count} avaliações)</span>
           </p>
-          <p className="detalhe-preco">R$ {produto.price.toFixed(2).replace('.', ',')}</p>
+          <p className="detalhe-preco">R$ {Number(produto.price).toFixed(2).replace('.', ',')}</p>
           <p className="detalhe-descricao">{produto.description}</p>
           <p className="detalhe-estoque">{produto.estoque} unidades disponíveis</p>
 
           <button
+            type="button"
             className="botao botao-grande"
             onClick={() => onAdicionar(produto)}
-            disabled={produto.estoque === 0}
+            disabled={!podeAdicionarAoCarrinho(produto)}
           >
-            Adicionar ao carrinho
+            {esgotado ? 'Produto esgotado' : 'Adicionar ao carrinho'}
           </button>
+
+          {esgotado && (
+            <form className="cupom" onSubmit={enviarAlerta}>
+              <label className="rotulo" htmlFor="aviso-preco">
+                Avise-me quando voltar
+              </label>
+              <input
+                id="aviso-preco"
+                type="text"
+                value={nome}
+                onChange={(evento) => setNome(evento.target.value)}
+                placeholder="Seu nome"
+              />
+              <input
+                type="email"
+                value={email}
+                onChange={(evento) => setEmail(evento.target.value)}
+                placeholder="Seu e-mail"
+              />
+              <button className="botao botao-secundario" type="submit">
+                Quero ser avisado
+              </button>
+              {mensagemEspera && <p className="mensagem-cupom">{mensagemEspera}</p>}
+            </form>
+          )}
 
           <ul className="detalhe-garantias">
             <li>Troca grátis em até 30 dias</li>
@@ -67,8 +130,13 @@ export default function PaginaProduto({ produtos, onAdicionar }) {
               <h3 className="card-titulo">{item.title}</h3>
             </Link>
             <p className="preco">R$ {Number(item.price).toFixed(2).replace('.', ',')}</p>
-            <button className="botao" onClick={() => onAdicionar(item)}>
-              Adicionar ao carrinho
+            <button
+              type="button"
+              className="botao"
+              onClick={() => onAdicionar(item)}
+              disabled={!podeAdicionarAoCarrinho(item)}
+            >
+              {item.estoque === 0 ? 'Esgotado' : 'Adicionar ao carrinho'}
             </button>
           </article>
         ))}
